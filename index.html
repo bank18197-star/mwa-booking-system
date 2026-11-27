@@ -471,27 +471,30 @@
     document.getElementById('login-password').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } };
 
   </script>
-  <script>
+<script>
     window._stage = 'app_0';
     function navigate(page) {
       if (['reports', 'manage-users', 'manage-locations', 'audit-logs'].includes(page) && state.user.role !== 'admin') {
         page = 'calendar';
       }
+      state.navSeq = (state.navSeq || 0) + 1;
+      const seq = state.navSeq;
       state.currentPage = page;
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.page === page));
       document.getElementById('sidebar').classList.remove('open');
       const titles = { calendar:'หน้าหลัก (ปฏิทินรายการจอง)', 'create-booking':'บันทึกการจองใหม่', 'manage-bookings':'จัดการรายการจอง', reports:'รายงานสรุปการจอง', 'manage-users':'จัดการผู้ใช้งาน', 'manage-locations':'จัดการสถานที่คืน', 'audit-logs':'ประวัติการทำรายการ' };
       document.getElementById('page-title').textContent = titles[page] || '';
       let p;
-      if (page === 'calendar') p = renderCalendarPage();
-      else if (page === 'create-booking') p = renderCreateBookingPage();
-      else if (page === 'manage-bookings') p = renderManageBookingsPage();
-      else if (page === 'reports') p = renderReportsPage();
-      else if (page === 'manage-users') p = renderUsersPage();
-      else if (page === 'manage-locations') p = renderLocationsPage();
-      else if (page === 'audit-logs') p = renderAuditLogsPage();
+      if (page === 'calendar') p = renderCalendarPage(seq);
+      else if (page === 'create-booking') p = renderCreateBookingPage(seq);
+      else if (page === 'manage-bookings') p = renderManageBookingsPage(seq);
+      else if (page === 'reports') p = renderReportsPage(seq);
+      else if (page === 'manage-users') p = renderUsersPage(seq);
+      else if (page === 'manage-locations') p = renderLocationsPage(seq);
+      else if (page === 'audit-logs') p = renderAuditLogsPage(seq);
       if (p && typeof p.catch === 'function') {
         p.catch((err) => {
+          if (state.navSeq !== seq) return;
           const pc = document.getElementById('page-content');
           if (pc) {
             pc.innerHTML = `<div class="panel"><div class="alert alert-error">${esc((err && err.message) || 'ไม่สามารถโหลดข้อมูลหน้านี้ได้')}</div><button type="button" class="btn btn-primary btn-sm" onclick="navigate('${esc(page)}')">ลองใหม่อีกครั้ง</button></div>`;
@@ -500,14 +503,17 @@
       }
     }
 
-    async function renderCalendarPage() {
+    async function renderCalendarPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const container = document.getElementById('page-content');
+      if (!container) return;
       let data = state.initialCalendar;
       if (data && data.year === state.calYear && data.month === state.calMonth) {
         state.initialCalendar = null;
       } else {
         container.innerHTML = '<div class="panel">กำลังโหลดปฏิทิน...</div>';
         data = await gas('apiGetCalendar', state.token, state.calYear, state.calMonth);
+        if (mySeq !== state.navSeq) return;
       }
       const bookings = (data && Array.isArray(data.bookings)) ? data.bookings : [];
       const stats = (data && data.stats) ? data.stats : { total: bookings.length, active: bookings.filter((b) => b.status === 'ACTIVE').length };
@@ -617,8 +623,10 @@
   </script>
   <script>
     window._stage = 'app_1';
-    async function renderCreateBookingPage() {
+    async function renderCreateBookingPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const container = document.getElementById('page-content');
+      if (!container) return;
       const now = new Date();
       const todayStr = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2);
       const defaultDate = state.preselectedDate || todayStr;
@@ -771,14 +779,22 @@
       document.getElementById('bk-camera').onchange = (e) => { handleFilesAdded(e.target.files); e.target.value = ''; };
 
       async function refreshSlots() {
-        const locId = document.getElementById('bk-location').value;
-        const date = document.getElementById('bk-date').value;
-        document.getElementById('bk-slot').value = '';
+        const locEl = document.getElementById('bk-location');
+        const dateEl = document.getElementById('bk-date');
+        const slotInput = document.getElementById('bk-slot');
+        const elBefore = document.getElementById('slots-container');
+        if (!locEl || !dateEl || !slotInput || !elBefore || mySeq !== state.navSeq) return;
+        const locId = locEl.value;
+        const date = dateEl.value;
+        slotInput.value = '';
+        elBefore.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.9rem">กำลังโหลดช่วงเวลา...</div>';
         const slots = await gas('apiGetSlots', state.token, locId, date, 0);
+        if (mySeq !== state.navSeq) return;
         const el = document.getElementById('slots-container');
+        if (!el) return;
         el.innerHTML = slots.map((s) => `<button type="button" class="slot-btn ${s.available ? '' : 'taken'}" data-slot="${esc(s.slot)}" ${s.available ? '' : 'disabled'}><div>${esc(s.slot)}</div><small>${s.available ? 'ว่าง' : 'จองแล้ว'}</small></button>`).join('');
         el.querySelectorAll('.slot-btn:not(.taken)').forEach((b) => {
-          b.onclick = () => { el.querySelectorAll('.slot-btn').forEach((x) => x.classList.remove('selected')); b.classList.add('selected'); document.getElementById('bk-slot').value = b.dataset.slot; };
+          b.onclick = () => { el.querySelectorAll('.slot-btn').forEach((x) => x.classList.remove('selected')); b.classList.add('selected'); const si = document.getElementById('bk-slot'); if (si) si.value = b.dataset.slot; };
         });
       }
       document.getElementById('bk-location').onchange = refreshSlots;
@@ -832,8 +848,10 @@
   </script>
   <script>
     window._stage = 'app_2';
-    async function renderManageBookingsPage() {
+    async function renderManageBookingsPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const container = document.getElementById('page-content');
+      if (!container) return;
       if (!document.getElementById('bk-filter-bar')) {
         const locOpts = state.locations.map((l) => '<option value="' + l.id + '">' + esc(l.name) + '</option>').join('');
         container.innerHTML = [
@@ -850,6 +868,7 @@
         document.getElementById('flt-q').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); renderManageBookingsPage(); } };
       }
       const data = await gas('apiGetBookings', state.token, { q: document.getElementById('flt-q').value, location_id: document.getElementById('flt-loc').value, status: 'ALL' });
+      if (mySeq !== state.navSeq) return;
       const items = (data && Array.isArray(data.items)) ? data.items : [];
       state.bookingsCache = items;
       const rows = items.map((b) => {
@@ -885,7 +904,9 @@
       }).join('');
       const tbodyHtml = rows || '<tr><td colspan="6">ไม่พบข้อมูล</td></tr>';
       const cardsHtml = mobileCards || '<p>ไม่พบข้อมูล</p>';
-      document.getElementById('bk-table-card').innerHTML =
+      const tableCard = document.getElementById('bk-table-card');
+      if (!tableCard) return;
+      tableCard.innerHTML =
         '<div class="desktop-only-table table-wrap"><table><thead><tr><th>วันที่ / เวลา</th><th>หัวข้อ / สัญญา</th><th>สถานที่คืน</th><th>หน่วยงาน / ผู้ติดต่อ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' + tbodyHtml + '</tbody></table></div>' +
         '<div class="mobile-cards">' + cardsHtml + '</div>';
     }
@@ -1011,7 +1032,8 @@
   </script>
   <script>
     window._stage = 'app_3';
-    async function renderReportsPage() {
+    async function renderReportsPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const locOpts = state.locations.map((l) => '<option value="' + l.id + '">' + esc(l.name) + '</option>').join('');
       document.getElementById('page-content').innerHTML = [
         '<div class="panel">',
@@ -1031,10 +1053,13 @@
       let lastRows = [];
       async function run() {
         const res = await gas('apiGetReports', state.token, { location_id: document.getElementById('rep-loc').value, date_from: document.getElementById('rep-from').value, date_to: document.getElementById('rep-to').value, department: document.getElementById('rep-dept').value });
+        if (mySeq !== state.navSeq) return;
+        const repEl = document.getElementById('rep-result');
+        if (!repEl) return;
         lastRows = (res && Array.isArray(res.summary)) ? res.summary : [];
         const tbody = lastRows.map((r) => '<tr><td>' + esc(r.department) + '</td><td>' + esc(r.location_name) + '</td><td class="num"><strong>' + r.total_count + '</strong></td><td class="num">' + r.active_count + '</td></tr>').join('') || '<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';
         const mCards = lastRows.map((r) => '<div class="m-card"><div class="m-card-title">' + esc(r.department) + '</div><div class="m-card-meta">สถานที่: ' + esc(r.location_name) + '<br>รวมทั้งหมด: <strong>' + r.total_count + '</strong> &middot; จองสำเร็จ: <strong>' + r.active_count + '</strong></div></div>').join('') || '<p>ไม่มีข้อมูล</p>';
-        document.getElementById('rep-result').innerHTML =
+        repEl.innerHTML =
           '<div class="desktop-only-table table-wrap"><table><thead><tr><th>หน่วยงาน</th><th>สถานที่คืน</th><th>รวมทั้งหมด</th><th>จองสำเร็จ</th></tr></thead><tbody>' + tbody + '</tbody></table></div>' +
           '<div class="mobile-cards">' + mCards + '</div>';
       }
@@ -1051,8 +1076,10 @@
       await run();
     }
 
-    async function renderUsersPage() {
+    async function renderUsersPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const users = await gas('apiGetUsers', state.token);
+      if (mySeq !== state.navSeq) return;
       state.usersCache = Array.isArray(users) ? users : [];
       const tbody = state.usersCache.map((u) => {
         const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป';
@@ -1118,8 +1145,10 @@
       });
     };
 
-    async function renderLocationsPage() {
+    async function renderLocationsPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const init = await gas('apiGetInitialData', state.token);
+      if (mySeq !== state.navSeq) return;
       state.locations = (init && Array.isArray(init.locations)) ? init.locations : [];
       const tbody = state.locations.map((l) => '<tr><td><strong>' + esc(l.name) + '</strong></td><td>' + esc(l.address) + '</td><td>' + esc(l.caretaker) + '</td><td>' + esc(l.phone) + '</td><td><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editLocation(' + l.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteLocation(' + l.id + ')">ลบ</button></div></td></tr>').join('');
       const mCards = state.locations.map((l) => '<div class="m-card"><div class="m-card-title">' + esc(l.name) + '</div><div class="m-card-meta">ที่ตั้ง: ' + esc(l.address || '-') + '<br>ผู้ดูแล: ' + esc(l.caretaker || '-') + ' &middot; โทร: ' + esc(l.phone || '-') + '</div><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editLocation(' + l.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteLocation(' + l.id + ')">ลบ</button></div></div>').join('') || '<p>ไม่พบข้อมูล</p>';
@@ -1170,8 +1199,10 @@
       });
     };
 
-    async function renderAuditLogsPage() {
+    async function renderAuditLogsPage(seq) {
+      const mySeq = seq || state.navSeq || 0;
       const logs = await gas('apiGetAuditLogs', state.token);
+      if (mySeq !== state.navSeq) return;
       const list = Array.isArray(logs) ? logs : [];
       const tbody = list.map((l) => '<tr><td class="num"><small>' + esc(l.created_at) + '</small></td><td><code>' + esc(l.username) + '</code></td><td>' + esc(l.action) + '</td><td>' + esc(l.entity_type) + ' #' + esc(l.entity_id) + '</td><td>' + esc(l.details) + '</td></tr>').join('');
       const mCards = list.map((l) => '<div class="m-card"><div class="m-card-top"><span class="m-card-time">' + esc(l.action) + '</span><small class="num">' + esc(l.created_at) + '</small></div><div class="m-card-meta">ผู้ใช้: <code>' + esc(l.username) + '</code> &middot; ' + esc(l.entity_type) + ' #' + esc(l.entity_id) + '<br>' + esc(l.details) + '</div></div>').join('') || '<p>ไม่พบข้อมูล</p>';
