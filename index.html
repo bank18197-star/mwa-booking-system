@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบจองคืนวัสดุรื้อคืน | กองคลังพัสดุ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <style>
+    :root {
+      --bg-canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --border: #dce3ec;
+      --border-strong: #c2ccd9;
+      --ink: #111c2d;
+      --ink-secondary: #475569;
+      --ink-muted: #64748b;
+      --mwa-blue: #00569e;
+      --mwa-blue-hover: #00437c;
+      --mwa-blue-soft: #e8f2fc;
+      --mwa-teal: #0e7c7b;
+      --mwa-teal-soft: #e6f5f4;
+      --danger: #c81e1e;
+      --danger-soft: #fef2f2;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+    * { box-sizing: border-box; }
+    html, body { max-width: 100%; overflow-x: hidden; }
+    body { margin: 0; font-family: "IBM Plex Sans Thai", "IBM Plex Sans", sans-serif; background: var(--bg-canvas); color: var(--ink); line-height: 1.5; }
+    .hidden { display: none !important; }
+    .req { color: var(--danger); font-weight: 700; }
+    .num { font-variant-numeric: tabular-nums; }
+    :focus-visible { outline: 2px solid var(--mwa-blue); outline-offset: 2px; }
+
+    /* Auth Centered Card (iframe-safe) */
+    .auth-layout { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg-canvas); }
+    .auth-box { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; box-shadow: 0 4px 18px rgba(17,28,45,0.06); }
+    .auth-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 6px; background: var(--mwa-blue-soft); color: var(--mwa-blue); font-size: 0.78rem; font-weight: 700; margin-bottom: 14px; }
+    .auth-header { margin-bottom: 20px; }
+    .auth-header h1 { margin: 0 0 6px; font-size: 1.38rem; font-weight: 700; color: var(--ink); }
+    .auth-header p { margin: 0; color: var(--ink-muted); font-size: 0.86rem; line-height: 1.5; }
+    .auth-specs { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px; }
+
+    /* Shell */
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar { width: 248px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; }
+    .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 18px 18px 16px; border-bottom: 1px solid var(--border); }
+    .brand-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--mwa-blue); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .brand-title { font-weight: 700; font-size: 0.95rem; color: var(--ink); line-height: 1.2; }
+    .brand-sub { font-size: 0.78rem; color: var(--ink-muted); }
+    .sidebar-nav { padding: 12px 10px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+    .nav-divider { margin: 14px 10px 6px; font-size: 0.76rem; font-weight: 600; color: var(--ink-muted); }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; border: none; border-left: 3px solid transparent; color: var(--ink-secondary); padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; font-family: inherit; }
+    .nav-item:hover { background: var(--bg-canvas); color: var(--ink); }
+    .nav-item.active { background: var(--mwa-blue-soft); color: var(--mwa-blue); font-weight: 600; border-left-color: var(--mwa-blue); }
+    .nav-ico { width: 17px; height: 17px; flex-shrink: 0; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid var(--border); background: var(--surface-muted); }
+    .user-card { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--mwa-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+    .user-meta { min-width: 0; }
+    .user-name { font-weight: 600; font-size: 0.88rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 0.76rem; color: var(--ink-muted); }
+
+    .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 20; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar h2 { margin: 0; font-size: 1.12rem; font-weight: 700; }
+    .content { padding: 24px 28px; max-width: 1320px; width: 100%; margin: 0 auto; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+    .kpi-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 18px; }
+    .kpi-items { display: flex; flex-wrap: wrap; gap: 28px; align-items: center; }
+    .kpi-item { display: flex; align-items: baseline; gap: 8px; }
+    .kpi-label { font-size: 0.86rem; color: var(--ink-muted); }
+    .kpi-num { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .kpi-num.teal { color: var(--mwa-teal); }
+
+    .field, .form-group { margin-bottom: 14px; min-width: 0; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; }
+    .detail-table th { width: 130px; vertical-align: top; }
+    .detail-table td { word-break: break-word; }
+    @media (max-width: 520px) { .detail-table th { width: 105px; font-size: 0.82rem; } .detail-table td { font-size: 0.84rem; } }
+    .field label, .form-group label { display: block; font-size: 0.86rem; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    input, select, textarea { width: 100%; max-width: 100%; min-width: 0; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); font-family: inherit; font-size: 0.92rem; color: var(--ink); background: var(--surface); }
+    input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-height: 40px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--mwa-blue); box-shadow: 0 0 0 3px var(--mwa-blue-soft); }
+
+    .btn-row { display: flex; gap: 8px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); border: 1px solid transparent; font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .btn-sm { padding: 5px 11px; font-size: 0.82rem; }
+    .btn-full { width: 100%; }
+    .btn-primary { background: var(--mwa-blue); color: #fff; }
+    .btn-primary:hover { background: var(--mwa-blue-hover); }
+    .btn-secondary, .btn-ghost { background: var(--surface); border-color: var(--border-strong); color: var(--ink); }
+    .btn-secondary:hover, .btn-ghost:hover { background: var(--bg-canvas); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge-active { background: var(--mwa-teal-soft); color: var(--mwa-teal); }
+    .badge-inactive { background: #f1f5f9; color: #475569; }
+    .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 0.88rem; margin-bottom: 14px; }
+    .alert-error { background: var(--danger-soft); color: var(--danger); border: 1px solid #fecaca; }
+
+    .cal-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
+    .cal-month-title { font-size: 1.15rem; font-weight: 700; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .cal-dow { background: var(--surface-muted); padding: 9px 6px; text-align: center; font-weight: 600; font-size: 0.82rem; color: var(--ink-secondary); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); min-width: 0; }
+    .cal-cell { min-height: 112px; min-width: 0; overflow: hidden; padding: 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); cursor: pointer; }
+    .cal-cell:hover { background: var(--surface-muted); }
+    .cal-cell.empty { background: #f9fafb; cursor: default; }
+    .cal-dow.weekend { background: #fef2f2; color: #b91c1c; }
+    .cal-cell.weekend { background: #fff5f5; }
+    .cal-cell.weekend:hover { background: #fee2e2; }
+    .cal-cell.weekend .cal-day-num { color: #b91c1c; }
+    .cal-cell.today { background: #f0f7ff; }
+    .cal-cell.today .cal-day-num { background: var(--mwa-blue); color: #fff; }
+    .cal-day-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .cal-day-num { font-weight: 600; font-size: 0.85rem; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .cal-cell.today .cal-day-num { background: var(--mwa-blue); color: #fff; }
+    .cal-day-count { font-size: 0.72rem; color: var(--ink-muted); }
+    .cal-pill { font-size: 0.74rem; padding: 3px 6px; border-radius: 4px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--mwa-teal-soft); color: var(--mwa-teal); border-left: 3px solid var(--mwa-teal); }
+    .cal-more { font-size: 0.74rem; color: var(--mwa-blue); font-weight: 600; margin-top: 2px; }
+
+    .form-section { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .form-section:last-of-type { border-bottom: none; margin-bottom: 8px; }
+    .form-section-title { font-size: 0.96rem; font-weight: 700; margin: 0 0 12px; color: var(--ink); }
+    .slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .slot-btn { padding: 11px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); cursor: pointer; text-align: center; font-family: inherit; }
+    .slot-btn:hover:not(.taken) { border-color: var(--mwa-blue); background: var(--mwa-blue-soft); }
+    .slot-btn.selected { border-color: var(--mwa-blue); background: var(--mwa-blue); color: #fff; font-weight: 600; }
+    .slot-btn.selected small { color: #dbeafe; }
+    .slot-btn.taken { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: var(--border); }
+    .slot-btn div { font-weight: 600; font-size: 0.92rem; }
+    .slot-btn small { font-size: 0.76rem; color: var(--ink-muted); }
+    .upload-zone { border: 1.5px dashed var(--border-strong); border-radius: var(--radius); padding: 16px; background: var(--surface-muted); }
+    .upload-preview { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
+    .upload-preview img { max-height: 96px; border-radius: 6px; border: 1px solid var(--border); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    th { background: var(--surface-muted); font-weight: 600; color: var(--ink-secondary); white-space: nowrap; }
+    .action-group { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .table-single-line th, .table-single-line td { white-space: nowrap; padding: 9px 10px; font-size: 0.85rem; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.52); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: min(1240px, 96vw); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+    .modal-header h3 { margin: 0; font-size: 1.02rem; font-weight: 700; }
+    .modal-body { padding: 20px; overflow-y: auto; }
+    .toast { position: fixed; bottom: 20px; right: 20px; z-index: 200; background: var(--ink); color: #fff; padding: 11px 18px; border-radius: var(--radius); font-size: 0.88rem; }
+    .lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(11, 18, 30, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+    .lightbox img { max-width: 96vw; max-height: 82vh; border-radius: 8px; object-fit: contain; box-shadow: 0 12px 32px rgba(0,0,0,0.45); }
+    .lightbox-bar { margin-top: 12px; display: flex; gap: 10px; align-items: center; color: #fff; font-size: 0.9rem; }
+    .sidebar-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 85; }
+    .mobile-only { display: none; }
+    @media (max-width: 1024px) {
+      .auth-layout { grid-template-columns: 1fr; }
+      .auth-aside { display: none; }
+    }
+    @media (max-width: 900px) {
+      .mobile-only { display: inline-flex; }
+      .sidebar { position: fixed; left: -260px; top: 0; bottom: 0; z-index: 90; transition: left 0.18s ease; }
+      .sidebar.open { left: 0; }
+      .topbar { padding: 10px 14px; }
+      .topbar h2 { font-size: 1rem; }
+      .content { padding: 14px; }
+      .panel { padding: 14px; }
+      .cal-cell { min-height: 68px; padding: 4px; }
+      .cal-pill { font-size: 0.68rem; padding: 2px 4px; }
+      .table-wrap { -webkit-overflow-scrolling: touch; }
+      .btn, input, select { min-height: 40px; }
+      .btn-sm { min-height: 32px; }
+    }
+    .mobile-cards { display: none; }
+    .m-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; background: var(--surface); max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+    .m-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .m-card-time { font-weight: 700; font-size: 0.9rem; color: var(--mwa-blue); font-variant-numeric: tabular-nums; }
+    .m-card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; color: var(--ink); }
+    .m-card-meta { font-size: 0.82rem; color: var(--ink-secondary); line-height: 1.45; margin-bottom: 10px; }
+    .desktop-only-table { display: block; }
+    @media (max-width: 720px) {
+      .desktop-only-table { display: none; }
+      .mobile-cards { display: block; }
+    }
+    @media (max-width: 520px) {
+      .kpi-strip { padding: 12px; gap: 10px; }
+      .kpi-items { gap: 14px; }
+      .kpi-strip > div:last-child { width: 100%; min-width: 0 !important; }
+      .topbar-left { min-width: 0; flex: 1; }
+      .topbar h2 { font-size: 0.94rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .topbar .btn-primary { padding: 6px 10px; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+      .cal-day-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+      .cal-day-count { font-size: 0.65rem; }
+      .cal-pill { font-size: 0.64rem; padding: 1px 3px; }
+      .modal-body { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="login-view" class="auth-layout">
+    <div class="auth-box">
+      <div class="auth-badge">ระบบนัดหมายคืนวัสดุรื้อคืน</div>
+      <div class="auth-header">
+        <h1>เข้าใช้งานระบบ</h1>
+        <p>จัดสรรพื้นที่ลานพัสดุล่วงหน้า เพื่อลดความแออัดหน้าคลังและตรวจสอบหลักฐานการคืนได้ครบถ้วน</p>
+      </div>
+      <form id="login-form" onsubmit="return false;" novalidate>
+        <div class="field">
+          <label for="login-username">ชื่อผู้ใช้งาน (Username) <span class="req">*</span></label>
+          <input type="text" id="login-username" required placeholder="กรอกชื่อผู้ใช้งาน" />
+        </div>
+        <div class="field">
+          <label for="login-password">รหัสผ่าน (Password) <span class="req">*</span></label>
+          <input type="password" id="login-password" required placeholder="กรอกรหัสผ่าน" />
+        </div>
+        <div id="login-error" class="alert alert-error hidden"></div>
+        <button type="button" id="login-btn" class="btn btn-primary btn-full" style="margin-top:6px" onclick="if(window.doLogin){window.doLogin();}else{var e=document.getElementById('login-error');if(e){e.textContent=window._lastErr||'ระบบยังโหลดไม่เสร็จ กรุณารีเฟรชหน้าเว็บแล้วลองใหม่';e.classList.remove('hidden');}}">เข้าสู่ระบบ</button>
+      </form>
+      <div class="auth-specs">
+        <div><strong>สถานที่รับคืน:</strong> กองคลังพัสดุกลาง &middot; ที่ทำการประปาเชียงราก</div>
+        <div><strong>รอบเวลาบริการ:</strong> 5 รอบต่อวัน (08.30 - 15.00 น.)</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-view" class="app-shell hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">M</div>
+        <div><div class="brand-title">ระบบจองวัสดุรื้อคืน</div><div class="brand-sub">กองคลังพัสดุ</div></div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="calendar">หน้าหลัก (ปฏิทิน)</button>
+        <button class="nav-item" data-page="create-booking">บันทึกการจอง</button>
+        <button class="nav-item" data-page="manage-bookings">จัดการรายการจอง</button>
+        <div class="nav-divider admin-only hidden">ส่วนผู้ดูแลระบบ</div>
+        <button class="nav-item admin-only hidden" data-page="manage-users">จัดการผู้ใช้งาน</button>
+        <button class="nav-item admin-only hidden" data-page="manage-locations">จัดการสถานที่คืน</button>
+        <button class="nav-item admin-only hidden" data-page="audit-logs">ประวัติการทำรายการ</button>
+        <button class="nav-item admin-only hidden" data-page="reports">รายงาน</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar" id="user-avatar">U</div>
+          <div class="user-meta"><div class="user-name" id="current-user-name">-</div><div class="user-role" id="current-user-role">-</div></div>
+        </div>
+        <button id="logout-btn" class="btn btn-secondary btn-full btn-sm">ออกจากระบบ</button>
+      </div>
+    </aside>
+    <div class="main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menu-toggle" class="btn btn-secondary btn-sm mobile-only">เมนู</button>
+          <h2 id="page-title">หน้าหลัก (ปฏิทินรายการจอง)</h2>
+        </div>
+        <button class="btn btn-primary" id="quick-book-btn">+ จองคิวคืนวัสดุ</button>
+      </header>
+      <main class="content" id="page-content"></main>
+    </div>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header"><h3 id="modal-title">รายละเอียด</h3><button id="modal-close" class="btn btn-secondary btn-sm">ปิด</button></div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+  <div id="lightbox" class="lightbox hidden" onclick="if(event.target===this) closeLightbox()">
+    <img id="lightbox-img" src="" alt="รูปภาพขยาย" />
+    <div class="lightbox-bar">
+      <span id="lightbox-name"></span>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeLightbox()">ปิดรูปภาพ</button>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script>
+    window._lastErr = '';
+    window._stage = 'init';
+    window.addEventListener('error', function(ev) {
+      var loc = (ev && ev.lineno) ? (' [' + window._stage + ' L' + ev.lineno + ':' + (ev.colno || 0) + ']') : (' [' + window._stage + ']');
+      var msg = 'เกิดข้อผิดพลาดในสคริปต์: ' + (ev && ev.message ? ev.message : String(ev)) + loc;
+      window._lastErr = msg;
+      var errEl = document.getElementById('login-error');
+      if (errEl) { errEl.textContent = msg; errEl.classList.remove('hidden'); }
+      var appView = document.getElementById('app-view');
+      var pc = document.getElementById('page-content');
+      if (appView && !appView.classList.contains('hidden') && pc && !pc.innerHTML.trim()) {
+        pc.innerHTML = '<div class="panel"><div class="alert alert-error">' + msg + '</div></div>';
+      }
+    });
+    window.addEventListener('unhandledrejection', function(ev) {
+      var r = ev && ev.reason;
+      var msg = 'เกิดข้อผิดพลาด: ' + (r && r.message ? r.message : String(r || 'Unknown error'));
+      window._lastErr = msg;
+      var errEl = document.getElementById('login-error');
+      if (errEl && !document.getElementById('login-view').classList.contains('hidden')) {
+        errEl.textContent = msg; errEl.classList.remove('hidden');
+      }
+    });
+  </script>
+  <script>
+    window._stage = 'index_core';
+    const state = {
+      user: null, token: '', timeSlots: [], locations: [], bookingsCache: [],
+      initialCalendar: null, imageCache: {},
+      currentPage: 'calendar', calYear: new Date().getFullYear(), calMonth: new Date().getMonth() + 1, calLocationId: '',
+    };
+    const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+    const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbzBkC3YxlQPcRZS-st44mccV4dVwuXgRWOX2jH4MWz4sA2hliQRLgNx2NQ43dIyDCEi/exec';
+    const SESS_KEY = 'mwa_session_token';
+    function saveSessionToken_(t) { try { if (t) localStorage.setItem(SESS_KEY, t); } catch (e) {} }
+    function loadSessionToken_() { try { return localStorage.getItem(SESS_KEY) || ''; } catch (e) { return ''; } }
+    function clearSessionToken_() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
+
+    function handleSessionExpired_(msg) {
+      if (msg.indexOf('เซสชันหมดอายุ') !== -1 && state.token) {
+        clearSessionToken_();
+        state.user = null;
+        state.token = '';
+        document.getElementById('app-view').classList.add('hidden');
+        document.getElementById('login-view').classList.remove('hidden');
+        showToast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+      }
+    }
+
+    async function gasFetch_(fn, args) {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 30000);
+      try {
+        const resp = await fetch(GAS_EXEC_URL, {
+          method: 'POST',
+          credentials: 'omit',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ fn: fn, args: args }),
+          signal: ctrl ? ctrl.signal : undefined,
+        });
+        const json = await resp.json();
+        if (!json || json.ok !== true) {
+          const msg = (json && json.error) ? json.error : 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์';
+          handleSessionExpired_(msg);
+          throw new Error(msg);
+        }
+        return json.data;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function gas(fn, ...args) {
+      return gasFetch_(fn, args).catch((fetchErr) => {
+        const isApiErr = fetchErr && fetchErr.message && !/Failed to fetch|NetworkError|Load failed|CSP|aborted|Unexpected token/i.test(fetchErr.message);
+        if (isApiErr || typeof google === 'undefined' || !google.script || !google.script.run) {
+          if (isApiErr) throw fetchErr;
+          throw new Error((fetchErr && fetchErr.message) || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง');
+        }
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            reject(new Error('การเชื่อมต่อเซิร์ฟเวอร์ใช้เวลานานเกินไป (Timeout) กรุณารีเฟรชหน้าเว็บแล้วลองใหม่'));
+          }, 30000);
+          google.script.run
+            .withSuccessHandler((res) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              resolve(res);
+            })
+            .withFailureHandler((err) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              const msg = (err && err.message) ? err.message : String(err || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+              handleSessionExpired_(msg);
+              reject(new Error(msg));
+            })[fn](...args);
+        });
+      });
+    }
+
+    function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function todayStrLocal() { const n = new Date(); return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2); }
+    function canModifyBooking(b) { return (state.user.role === 'admin' || Number(b.user_id) === Number(state.user.id)) && String(b.booking_date) >= todayStrLocal(); }
+    function showToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.remove('hidden'); clearTimeout(showToast._t); showToast._t = setTimeout(() => el.classList.add('hidden'), 3200); }
+    function statusBadge(st) { return st === 'ACTIVE' ? '<span class="badge badge-active"><span class="badge-dot"></span>จองสำเร็จ</span>' : '<span class="badge badge-inactive">ปิดใช้งาน</span>'; }
+    function openModal(t, html) { document.getElementById('modal-title').textContent = t; document.getElementById('modal-body').innerHTML = html; document.getElementById('modal-backdrop').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('modal-backdrop').classList.add('hidden'); }
+    function openConfirmModal(title, message, onConfirm) {
+      openModal(title, '<p style="margin-top:0;margin-bottom:18px;color:var(--ink)">' + esc(message) + '</p><div id="cfm-err" class="alert alert-error hidden"></div><div class="btn-row" style="justify-content:flex-end"><button type="button" class="btn btn-secondary" onclick="closeModal()">ยกเลิก</button><button type="button" class="btn btn-danger" id="cfm-ok-btn">ยืนยันการลบ</button></div>');
+      document.getElementById('cfm-ok-btn').onclick = async function() {
+        var btn = document.getElementById('cfm-ok-btn');
+        btn.disabled = true; btn.textContent = 'กำลังดำเนินการ...';
+        try { await onConfirm(); } catch (err) {
+          var errEl = document.getElementById('cfm-err');
+          if (errEl) { errEl.textContent = (err && err.message) || String(err); errEl.classList.remove('hidden'); }
+          btn.disabled = false; btn.textContent = 'ยืนยันการลบ';
+        }
+      };
+    }
+
+    function showApp() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('app-view').classList.remove('hidden');
+      window.scrollTo(0, 0);
+      const name = state.user.full_name || state.user.username;
+      document.getElementById('current-user-name').textContent = name;
+      document.getElementById('current-user-role').textContent = state.user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป';
+      document.getElementById('user-avatar').textContent = name.trim().charAt(0).toUpperCase();
+      document.querySelectorAll('.admin-only').forEach((el) => el.classList.toggle('hidden', state.user.role !== 'admin'));
+      try {
+        if (typeof navigate !== 'function') {
+          throw new Error('สคริปต์หน้าหลัก (App.html) ยังไม่ถูกโหลด: ' + (window._lastErr || 'navigate is undefined'));
+        }
+        navigate('calendar');
+      } catch (err) {
+        var pc = document.getElementById('page-content');
+        if (pc) {
+          pc.innerHTML = '<div class="panel"><div class="alert alert-error">' + esc((err && err.message) || 'ไม่สามารถเปิดหน้าปฏิทินได้') + '</div><button type="button" class="btn btn-primary btn-sm" onclick="location.reload()">รีเฟรชหน้าเว็บ</button></div>';
+        }
+      }
+    }
+
+
+    async function doLogin() {
+      const btn = document.getElementById('login-btn');
+      if (btn.disabled) return;
+      const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!username || !password) {
+        errEl.textContent = 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
+      try {
+        const res = await gas('apiLogin', username, password);
+        if (!res || !res.user) {
+          throw new Error('ไม่ได้รับข้อมูลจากเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
+        }
+        state.user = res.user; state.token = res.token; state.timeSlots = res.timeSlots || [];
+        saveSessionToken_(res.token);
+        state.locations = res.locations || [];
+        state.initialCalendar = res.initialCalendar || null;
+        showApp();
+      } catch (err) {
+        errEl.textContent = (err && err.message) ? err.message : 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง';
+        errEl.classList.remove('hidden');
+      } finally { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
+    }
+    window.doLogin = doLogin;
+    document.getElementById('login-btn').onclick = doLogin;
+    document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); doLogin(); return false; };
+    document.getElementById('login-username').onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const pw = document.getElementById('login-password');
+        if (pw.value) doLogin(); else pw.focus();
+      }
+    };
+    document.getElementById('login-password').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } };
+
+  </script>
+  <script>
+    window._stage = 'app_0';
+    function navigate(page) {
+      if (['reports', 'manage-users', 'manage-locations', 'audit-logs'].includes(page) && state.user.role !== 'admin') {
+        page = 'calendar';
+      }
+      state.currentPage = page;
+      document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.page === page));
+      document.getElementById('sidebar').classList.remove('open');
+      const titles = { calendar:'หน้าหลัก (ปฏิทินรายการจอง)', 'create-booking':'บันทึกการจองใหม่', 'manage-bookings':'จัดการรายการจอง', reports:'รายงานสรุปการจอง', 'manage-users':'จัดการผู้ใช้งาน', 'manage-locations':'จัดการสถานที่คืน', 'audit-logs':'ประวัติการทำรายการ' };
+      document.getElementById('page-title').textContent = titles[page] || '';
+      let p;
+      if (page === 'calendar') p = renderCalendarPage();
+      else if (page === 'create-booking') p = renderCreateBookingPage();
+      else if (page === 'manage-bookings') p = renderManageBookingsPage();
+      else if (page === 'reports') p = renderReportsPage();
+      else if (page === 'manage-users') p = renderUsersPage();
+      else if (page === 'manage-locations') p = renderLocationsPage();
+      else if (page === 'audit-logs') p = renderAuditLogsPage();
+      if (p && typeof p.catch === 'function') {
+        p.catch((err) => {
+          const pc = document.getElementById('page-content');
+          if (pc) {
+            pc.innerHTML = `<div class="panel"><div class="alert alert-error">${esc((err && err.message) || 'ไม่สามารถโหลดข้อมูลหน้านี้ได้')}</div><button type="button" class="btn btn-primary btn-sm" onclick="navigate('${esc(page)}')">ลองใหม่อีกครั้ง</button></div>`;
+          }
+        });
+      }
+    }
+
+    async function renderCalendarPage() {
+      const container = document.getElementById('page-content');
+      let data = state.initialCalendar;
+      if (data && data.year === state.calYear && data.month === state.calMonth) {
+        state.initialCalendar = null;
+      } else {
+        container.innerHTML = '<div class="panel">กำลังโหลดปฏิทิน...</div>';
+        data = await gas('apiGetCalendar', state.token, state.calYear, state.calMonth);
+      }
+      const bookings = (data && Array.isArray(data.bookings)) ? data.bookings : [];
+      const stats = (data && data.stats) ? data.stats : { total: bookings.length, active: bookings.filter((b) => b.status === 'ACTIVE').length };
+      state.bookingsCache = bookings;
+      const byDate = new Map();
+      bookings.forEach((b) => { if (!byDate.has(b.booking_date)) byDate.set(b.booking_date, []); byDate.get(b.booking_date).push(b); });
+
+      const firstDay = new Date(state.calYear, state.calMonth - 1, 1).getDay();
+      const daysInMonth = new Date(state.calYear, state.calMonth, 0).getDate();
+      const now = new Date();
+      const todayStr = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2);
+
+      let cells = '';
+      for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell empty"></div>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = state.calYear + '-' + ('0' + state.calMonth).slice(-2) + '-' + ('0' + d).slice(-2);
+        const dow = (firstDay + d - 1) % 7;
+        const isWeekend = dow === 0 || dow === 6;
+        const list = byDate.get(dateStr) || [];
+        const pills = list.slice(0, 3).map((b) => `<div class="cal-pill" title="${esc(b.subject)}">${esc(b.time_slot)} ${esc(b.department)}</div>`).join('');
+        const more = list.length > 3 ? `<div class="cal-more">+อีก ${list.length - 3} รายการ</div>` : '';
+        const cnt = list.length > 0 ? `<span class="cal-day-count">${list.length} คิว</span>` : '';
+        cells += `<div class="cal-cell ${isWeekend ? 'weekend' : ''} ${dateStr === todayStr ? 'today' : ''}" data-date="${dateStr}"><div class="cal-day-head"><span class="cal-day-num">${d}</span>${cnt}</div>${pills}${more}</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="kpi-strip">
+          <div class="kpi-items">
+            <div class="kpi-item"><span class="kpi-label">รายการจองทั้งหมด</span><span class="kpi-num">${stats.total}</span></div>
+            <div class="kpi-item"><span class="kpi-label">จองสำเร็จ</span><span class="kpi-num teal">${stats.active}</span></div>
+            <div class="kpi-item"><span class="kpi-label">สถานที่เปิดบริการ</span><span class="kpi-num">${state.locations.length}</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="cal-toolbar">
+            <div class="cal-month-title num">${THAI_MONTHS[state.calMonth - 1]} ${state.calYear + 543}</div>
+            <div class="btn-row">
+              <button class="btn btn-secondary btn-sm" id="prev-month">เดือนก่อนหน้า</button>
+              <button class="btn btn-secondary btn-sm" id="today-month">เดือนปัจจุบัน</button>
+              <button class="btn btn-secondary btn-sm" id="next-month">เดือนถัดไป</button>
+            </div>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-dow weekend">อา</div><div class="cal-dow">จ</div><div class="cal-dow">อ</div><div class="cal-dow">พ</div><div class="cal-dow">พฤ</div><div class="cal-dow">ศ</div><div class="cal-dow weekend">ส</div>
+            ${cells}
+          </div>
+        </div>`;
+
+      document.getElementById('prev-month').onclick = () => { state.calMonth--; if (state.calMonth < 1) { state.calMonth = 12; state.calYear--; } renderCalendarPage(); };
+      document.getElementById('next-month').onclick = () => { state.calMonth++; if (state.calMonth > 12) { state.calMonth = 1; state.calYear++; } renderCalendarPage(); };
+      document.getElementById('today-month').onclick = () => { const n = new Date(); state.calYear = n.getFullYear(); state.calMonth = n.getMonth() + 1; renderCalendarPage(); };
+
+      container.querySelectorAll('.cal-cell[data-date]').forEach((cell) => {
+        cell.onclick = () => {
+          const dateStr = cell.dataset.date;
+          const list = byDate.get(dateStr) || [];
+          const canBookDate = dateStr >= todayStrLocal();
+          const bookBtnHtml = canBookDate
+            ? '<button class="btn btn-primary" onclick="closeModal(); navigateToBook(\'' + esc(dateStr) + '\')">+ จองคิววันนี้</button>'
+            : '<span style="color:var(--ink-muted);font-size:0.86rem">เลยวันที่จองแล้ว ไม่สามารถจองย้อนหลังได้</span>';
+          if (!list.length) {
+            openModal('รายการวันที่ ' + dateStr, '<p>ยังไม่มีรายการจองในวันนี้</p>' + bookBtnHtml);
+            return;
+          }
+          const rows = list.map((b) => {
+            const canMod = canModifyBooking(b);
+            const editBtn = canMod ? '<button class="btn btn-secondary btn-sm" onclick="editBooking(' + b.id + ')">แก้ไข</button>' : '';
+            const delBtn = canMod ? '<button class="btn btn-danger btn-sm" onclick="deleteBooking(' + b.id + ')">ลบ</button>' : '';
+            return `<tr>
+              <td class="num">${esc(b.time_slot)}</td><td><strong>${esc(b.subject)}</strong></td><td>${esc(b.location_name)}</td>
+              <td>${esc(b.department)}</td><td>${esc(b.person_meeting)}</td><td>${statusBadge(b.status)}</td>
+              <td><div class="action-group">
+                <button class="btn btn-secondary btn-sm" onclick="viewBookingDetail(${b.id})">ดู</button>
+                ${editBtn}
+                ${delBtn}
+              </div></td></tr>`;
+          }).join('');
+          const mobileCards = list.map((b) => {
+            const canMod = canModifyBooking(b);
+            const editBtn = canMod ? '<button class="btn btn-secondary btn-sm" onclick="editBooking(' + b.id + ')">แก้ไข</button>' : '';
+            const delBtn = canMod ? '<button class="btn btn-danger btn-sm" onclick="deleteBooking(' + b.id + ')">ลบ</button>' : '';
+            return `<div class="m-card">
+              <div class="m-card-top"><span class="m-card-time">${esc(b.time_slot)}</span>${statusBadge(b.status)}</div>
+              <div class="m-card-title">${esc(b.subject)}</div>
+              <div class="m-card-meta">สถานที่: ${esc(b.location_name)}<br>หน่วยงาน: ${esc(b.department)}<br>ผู้ติดต่อ: ${esc(b.person_meeting)}</div>
+              <div class="action-group">
+                <button class="btn btn-secondary btn-sm" onclick="viewBookingDetail(${b.id})">ดู</button>
+                ${editBtn}
+                ${delBtn}
+              </div>
+            </div>`;
+          }).join('');
+          const addMoreHtml = canBookDate
+            ? '<button class="btn btn-primary" onclick="closeModal(); navigateToBook(\'' + esc(dateStr) + '\')">+ จองเพิ่มในวันนี้</button>'
+            : '<span style="color:var(--ink-muted);font-size:0.86rem">เลยวันที่จองแล้ว ไม่สามารถจองย้อนหลังได้</span>';
+          openModal('รายการจองวันที่ ' + dateStr, [
+            '<div class="desktop-only-table table-wrap"><table class="table-single-line"><thead><tr><th>เวลา</th><th>หัวข้อ</th><th>สถานที่</th><th>หน่วยงาน</th><th>ผู้ติดต่อ</th><th>สถานะ</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>',
+            '<div class="mobile-cards">' + mobileCards + '</div>',
+            '<div style="margin-top:14px">' + addMoreHtml + '</div>'
+          ].join(''));
+        };
+      });
+    }
+
+    window.navigateToBook = (d) => { state.preselectedDate = d; navigate('create-booking'); };
+
+  </script>
+  <script>
+    window._stage = 'app_1';
+    async function renderCreateBookingPage() {
+      const container = document.getElementById('page-content');
+      const now = new Date();
+      const todayStr = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2);
+      const defaultDate = state.preselectedDate || todayStr;
+      state.preselectedDate = null;
+
+      const locOpts = state.locations.map(function(l) { return '<option value="' + l.id + '">' + esc(l.name) + '</option>'; }).join('');
+      const minDateVal = esc(defaultDate < todayStr ? todayStr : defaultDate);
+      container.innerHTML = [
+        '<div class="panel">',
+        '  <form id="booking-form" novalidate>',
+        '    <div class="form-section">',
+        '      <h3 class="form-section-title">1. เลือกสถานที่และช่วงเวลาคืนพัสดุ</h3>',
+        '      <div class="form-grid">',
+        '        <div class="form-group"><label>สถานที่คืนพัสดุ <span class="req">*</span></label><select id="bk-location">' + locOpts + '</select></div>',
+        '        <div class="form-group"><label>วันที่จองคืน <span class="req">*</span></label><input type="date" id="bk-date" min="' + esc(todayStr) + '" value="' + minDateVal + '" required /></div>',
+        '      </div>',
+        '      <div class="form-group" style="margin-bottom:0"><label>เลือกช่วงเวลา <span class="req">*</span></label><div id="slots-container" class="slots-grid"></div><input type="hidden" id="bk-slot" /></div>',
+        '    </div>',
+        '    <div class="form-section">',
+        '      <h3 class="form-section-title">2. ข้อมูลวัสดุและผู้ติดต่อ</h3>',
+        '      <div class="form-grid">',
+        '        <div class="form-group"><label>หัวข้อ / รายละเอียดวัสดุ <span class="req">*</span></label><input id="bk-subject" required /></div>',
+        '        <div class="form-group"><label>ข้อมูลหัวข้อเพิ่มเติม / โครงการ</label><input id="bk-header" /></div>',
+        '        <div class="form-group"><label>เลขที่สัญญา</label><input id="bk-contract" /></div>',
+        '        <div class="form-group"><label>สังกัด / หน่วยงาน <span class="req">*</span></label><input id="bk-dept" value="' + esc(state.user.department || '') + '" required /></div>',
+        '        <div class="form-group"><label>ชื่อผู้ติดต่อ / ผู้คืน <span class="req">*</span></label><input id="bk-person" value="' + esc(state.user.full_name || '') + '" required /></div>',
+        '        <div class="form-group"><label>เบอร์โทรศัพท์ <span class="req">*</span></label><input id="bk-phone" value="' + esc(state.user.phone || '') + '" required /></div>',
+        '      </div>',
+        '    </div>',
+        '    <div class="form-section">',
+        '      <h3 class="form-section-title">3. หลักฐานรูปภาพและหมายเหตุ</h3>',
+        '      <div class="form-group">',
+        '        <label>แนบไฟล์รูปภาพ / เอกสาร <span class="req">*</span> (เลือกได้หลายไฟล์: JPG, PNG, WebP, GIF, BMP, HEIC, PDF)</label>',
+        '        <div class="upload-zone">',
+        '          <div class="btn-row" style="flex-wrap:wrap">',
+        '            <button type="button" class="btn btn-secondary btn-sm" id="bk-pick-files">เลือกไฟล์ / รูปภาพ (หลายไฟล์)</button>',
+        '            <button type="button" class="btn btn-primary btn-sm" id="bk-pick-camera">ถ่ายรูปจากกล้อง</button>',
+        '          </div>',
+        '          <input type="file" id="bk-file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/heic,image/heif,.heic,.heif,application/pdf" multiple class="hidden" />',
+        '          <input type="file" id="bk-camera" accept="image/*" capture="environment" class="hidden" />',
+        '          <div id="bk-file-preview" class="hidden" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>',
+        '        </div>',
+        '      </div>',
+        '      <div class="form-group" style="margin-bottom:0"><label>หมายเหตุ</label><textarea id="bk-remark" rows="3"></textarea></div>',
+        '    </div>',
+        '    <div id="bk-error" class="alert alert-error hidden"></div>',
+        '    <button type="submit" id="bk-submit" class="btn btn-primary">บันทึกรายการจอง</button>',
+        '  </form>',
+        '</div>'
+      ].join('\n');
+
+      const selectedFiles = [];
+      function compressImage(file, maxDim, quality) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              let w = img.width, h = img.height;
+              if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+              const dataUrl = canvas.toDataURL(mime, quality);
+              resolve({ fileName: file.name, fileMime: mime, dataUrl: dataUrl, fileBase64: dataUrl.split(',')[1], isImg: true });
+            };
+            img.onerror = reject;
+            img.src = reader.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function renderFilePreviews() {
+        const prev = document.getElementById('bk-file-preview');
+        if (selectedFiles.length === 0) {
+          prev.classList.add('hidden');
+          prev.innerHTML = '';
+          return;
+        }
+        prev.classList.remove('hidden');
+        prev.innerHTML = selectedFiles.map((item, idx) => {
+          const approxKb = Math.round((item.fileBase64.length * 0.75) / 1024);
+          const thumbHtml = item.isImg
+            ? '<img src="' + item.dataUrl + '" data-zoom="' + idx + '" style="width:52px;height:52px;object-fit:cover;border-radius:4px;cursor:zoom-in;flex-shrink:0" />'
+            : '<span style="font-size:0.85rem;font-weight:700;color:var(--mwa-blue)">FILE</span>';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:6px">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0">
+              ${thumbHtml}
+              <div style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${esc(item.fileName)}</strong><br><small class="num">~${approxKb} KB</small></div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" data-rm="${idx}">ลบ</button>
+          </div>`;
+        }).join('');
+        prev.querySelectorAll('img[data-zoom]').forEach((img) => {
+          img.onclick = () => {
+            const it = selectedFiles[Number(img.dataset.zoom)];
+            if (it) openImageLightbox(it.dataUrl, it.fileName);
+          };
+        });
+        prev.querySelectorAll('button[data-rm]').forEach((btn) => {
+          btn.onclick = () => {
+            selectedFiles.splice(Number(btn.dataset.rm), 1);
+            renderFilePreviews();
+          };
+        });
+      }
+
+      async function handleFilesAdded(fileList) {
+        const files = Array.from(fileList || []);
+        for (const f of files) {
+          if (selectedFiles.length >= 10) {
+            showToast('แนบไฟล์ได้สูงสุด 10 ไฟล์ต่อรายการ');
+            break;
+          }
+          const canCanvas = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'].includes(f.type) || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name || '');
+          if (canCanvas) {
+            try {
+              const compressed = await compressImage(f, 1400, 0.82);
+              selectedFiles.push(compressed);
+              continue;
+            } catch (e) {}
+          }
+          if (f.size > 10 * 1024 * 1024) {
+            showToast(`ไฟล์ ${f.name} มีขนาดเกิน 10MB`);
+            continue;
+          }
+          const rawItem = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = String(reader.result);
+              resolve({ fileName: f.name, fileMime: f.type || 'application/octet-stream', dataUrl: res, fileBase64: res.split(',')[1], isImg: false });
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(f);
+          });
+          if (rawItem) selectedFiles.push(rawItem);
+        }
+        renderFilePreviews();
+      }
+
+      document.getElementById('bk-pick-files').onclick = () => document.getElementById('bk-file').click();
+      document.getElementById('bk-pick-camera').onclick = () => document.getElementById('bk-camera').click();
+      document.getElementById('bk-file').onchange = (e) => { handleFilesAdded(e.target.files); e.target.value = ''; };
+      document.getElementById('bk-camera').onchange = (e) => { handleFilesAdded(e.target.files); e.target.value = ''; };
+
+      async function refreshSlots() {
+        const locId = document.getElementById('bk-location').value;
+        const date = document.getElementById('bk-date').value;
+        document.getElementById('bk-slot').value = '';
+        const slots = await gas('apiGetSlots', state.token, locId, date, 0);
+        const el = document.getElementById('slots-container');
+        el.innerHTML = slots.map((s) => `<button type="button" class="slot-btn ${s.available ? '' : 'taken'}" data-slot="${esc(s.slot)}" ${s.available ? '' : 'disabled'}><div>${esc(s.slot)}</div><small>${s.available ? 'ว่าง' : 'จองแล้ว'}</small></button>`).join('');
+        el.querySelectorAll('.slot-btn:not(.taken)').forEach((b) => {
+          b.onclick = () => { el.querySelectorAll('.slot-btn').forEach((x) => x.classList.remove('selected')); b.classList.add('selected'); document.getElementById('bk-slot').value = b.dataset.slot; };
+        });
+      }
+      document.getElementById('bk-location').onchange = refreshSlots;
+      document.getElementById('bk-date').onchange = refreshSlots;
+      await refreshSlots();
+
+      openModal('หมายเหตุและข้อปฏิบัติในการจองคืนวัสดุ', `
+        <div style="line-height:1.7;font-size:0.94rem;color:var(--ink)">
+          <p style="margin-top:0;font-weight:700">หมายเหตุ :</p>
+          <ol style="padding-left:20px;margin:0 0 18px;display:flex;flex-direction:column;gap:10px">
+            <li>ขอความร่วมมือให้หน่วยงานมาตรงตาม <strong>เวลาที่จองพร้อมจัดเตรียมเอกสารประกอบการคืนทั้งหมด ให้ครบถ้วนสมบูรณ์มาพร้อมกับวัสดุที่จะคืน</strong></li>
+            <li>การส่งคืนท่อประธาน <strong>ขนาดตั้งแต่ ศก. 800 มม. ขึ้นไป</strong> คลังพัสดุ 2 ได้รับความเห็นชอบจากท่าน ผวก. ให้จัดเก็บพื้นที่วางท่อไว้ที่ <strong>ที่ดินบริเวณที่ทำการประปาเชียงราก</strong> ตั้งแต่ 1 กรกฎาคม 2567 ทั้งนี้กรุณาสอบถาม <strong>เรื่องพื้นที่ลงวัสดุท่อ</strong> เพื่อรับการยืนยันจากคลังพัสดุ 2 ล่วงหน้าก่อนดำเนินการคืน</li>
+            <li>สอบถามจาก คลังพัสดุ 2 เบอร์โทรภายใน <strong>2962, 2958</strong> <span style="color:var(--danger);font-weight:600">(*กรุณา พิมพ์หน้าที่จองแนบ มากับใบคืนทุกครั้ง*)</span></li>
+          </ol>
+          <button type="button" class="btn btn-primary btn-full" onclick="closeModal()">รับทราบ / เริ่มบันทึกการจอง</button>
+        </div>
+      `);
+
+      document.getElementById('booking-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('bk-error'); errEl.classList.add('hidden');
+        const btn = document.getElementById('bk-submit');
+        if (!document.getElementById('bk-slot').value) { errEl.textContent = 'กรุณาเลือกช่วงเวลาที่ว่าง'; errEl.classList.remove('hidden'); return; }
+        if (!document.getElementById('bk-subject').value.trim() || !document.getElementById('bk-dept').value.trim() || !document.getElementById('bk-person').value.trim() || !document.getElementById('bk-phone').value.trim()) {
+          errEl.textContent = 'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน'; errEl.classList.remove('hidden'); return;
+        }
+        if (selectedFiles.length === 0) { errEl.textContent = 'กรุณาแนบไฟล์รูปภาพหรือเอกสารอย่างน้อย 1 ไฟล์'; errEl.classList.remove('hidden'); return; }
+        btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+        try {
+          const res = await gas('apiCreateBooking', state.token, {
+            location_id: document.getElementById('bk-location').value,
+            booking_date: document.getElementById('bk-date').value,
+            time_slot: document.getElementById('bk-slot').value,
+            subject: document.getElementById('bk-subject').value,
+            header: document.getElementById('bk-header').value,
+            contract_no: document.getElementById('bk-contract').value,
+            department: document.getElementById('bk-dept').value,
+            person_meeting: document.getElementById('bk-person').value,
+            phone: document.getElementById('bk-phone').value,
+            remark: document.getElementById('bk-remark').value,
+            files: selectedFiles.map((f) => ({ fileBase64: f.fileBase64, fileName: f.fileName, fileMime: f.fileMime })),
+          });
+          showToast(res.message);
+          navigate('manage-bookings');
+        } catch (err) {
+          errEl.textContent = err.message; errEl.classList.remove('hidden');
+        } finally { btn.disabled = false; btn.textContent = 'บันทึกรายการจอง'; }
+      };
+    }
+
+  </script>
+  <script>
+    window._stage = 'app_2';
+    async function renderManageBookingsPage() {
+      const container = document.getElementById('page-content');
+      if (!document.getElementById('bk-filter-bar')) {
+        const locOpts = state.locations.map((l) => '<option value="' + l.id + '">' + esc(l.name) + '</option>').join('');
+        container.innerHTML = [
+          '<div class="panel" id="bk-filter-bar">',
+          '  <div class="form-grid">',
+          '    <div class="form-group"><label>ค้นหา</label><input id="flt-q" placeholder="หัวข้อ / หน่วยงาน / ผู้ติดต่อ..." /></div>',
+          '    <div class="form-group"><label>สถานที่คืน</label><select id="flt-loc"><option value="">ทั้งหมด</option>' + locOpts + '</select></div>',
+          '    <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary btn-full" id="flt-search">ค้นหา</button></div>',
+          '  </div>',
+          '</div>',
+          '<div class="panel" id="bk-table-card">กำลังโหลด...</div>'
+        ].join('\n');
+        document.getElementById('flt-search').onclick = renderManageBookingsPage;
+        document.getElementById('flt-q').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); renderManageBookingsPage(); } };
+      }
+      const data = await gas('apiGetBookings', state.token, { q: document.getElementById('flt-q').value, location_id: document.getElementById('flt-loc').value, status: 'ALL' });
+      const items = (data && Array.isArray(data.items)) ? data.items : [];
+      state.bookingsCache = items;
+      const rows = items.map((b) => {
+        const canMod = canModifyBooking(b);
+        const editBtn = canMod ? '<button class="btn btn-secondary btn-sm" onclick="editBooking(' + b.id + ')">แก้ไข</button>' : '';
+        const delBtn = canMod ? '<button class="btn btn-danger btn-sm" onclick="deleteBooking(' + b.id + ')">ลบ</button>' : '';
+        return `<tr>
+          <td class="num"><strong>${esc(b.booking_date)}</strong><br><small>${esc(b.time_slot)}</small></td>
+          <td><strong>${esc(b.subject)}</strong><br><small>${esc(b.contract_no || '-')}</small></td>
+          <td>${esc(b.location_name)}</td>
+          <td>${esc(b.department)}<br><small>${esc(b.person_meeting)}</small></td>
+          <td>${statusBadge(b.status)}</td>
+          <td><div class="action-group">
+            <button class="btn btn-secondary btn-sm" onclick="viewBookingDetail(${b.id})">ดู</button>
+            ${editBtn}
+            ${delBtn}
+          </div></td></tr>`;
+      }).join('');
+      const mobileCards = items.map((b) => {
+        const canMod = canModifyBooking(b);
+        const editBtn = canMod ? '<button class="btn btn-secondary btn-sm" onclick="editBooking(' + b.id + ')">แก้ไข</button>' : '';
+        const delBtn = canMod ? '<button class="btn btn-danger btn-sm" onclick="deleteBooking(' + b.id + ')">ลบ</button>' : '';
+        return `<div class="m-card">
+          <div class="m-card-top"><span class="m-card-time">${esc(b.booking_date)} (${esc(b.time_slot)})</span>${statusBadge(b.status)}</div>
+          <div class="m-card-title">${esc(b.subject)}</div>
+          <div class="m-card-meta">สถานที่: ${esc(b.location_name)}<br>หน่วยงาน: ${esc(b.department)} &middot; ผู้ติดต่อ: ${esc(b.person_meeting)}</div>
+          <div class="action-group">
+            <button class="btn btn-secondary btn-sm" onclick="viewBookingDetail(${b.id})">ดู</button>
+            ${editBtn}
+            ${delBtn}
+          </div>
+        </div>`;
+      }).join('');
+      const tbodyHtml = rows || '<tr><td colspan="6">ไม่พบข้อมูล</td></tr>';
+      const cardsHtml = mobileCards || '<p>ไม่พบข้อมูล</p>';
+      document.getElementById('bk-table-card').innerHTML =
+        '<div class="desktop-only-table table-wrap"><table><thead><tr><th>วันที่ / เวลา</th><th>หัวข้อ / สัญญา</th><th>สถานที่คืน</th><th>หน่วยงาน / ผู้ติดต่อ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' + tbodyHtml + '</tbody></table></div>' +
+        '<div class="mobile-cards">' + cardsHtml + '</div>';
+    }
+
+    window.openImageLightbox = (src, name) => {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox-name').textContent = name || '';
+      document.getElementById('lightbox').classList.remove('hidden');
+    };
+    window.closeLightbox = () => {
+      document.getElementById('lightbox').classList.add('hidden');
+      document.getElementById('lightbox-img').src = '';
+    };
+
+    window.viewBookingDetail = async (id) => {
+      const b = state.bookingsCache.find((x) => Number(x.id) === Number(id));
+      if (!b) return;
+      openModal('รายละเอียดรายการจอง #' + b.id, `
+        <table class="detail-table">
+          <tr><th>สถานะ</th><td>${statusBadge(b.status)}</td></tr>
+          <tr><th>หัวข้อ</th><td>${esc(b.subject)}</td></tr>
+          <tr><th>โครงการ</th><td>${esc(b.header || '-')}</td></tr>
+          <tr><th>เลขที่สัญญา</th><td>${esc(b.contract_no || '-')}</td></tr>
+          <tr><th>สถานที่คืน</th><td>${esc(b.location_name)}</td></tr>
+          <tr><th>วันที่ / เวลา</th><td>${esc(b.booking_date)} (${esc(b.time_slot)})</td></tr>
+          <tr><th>หน่วยงาน</th><td>${esc(b.department)}</td></tr>
+          <tr><th>ผู้ติดต่อ / โทร</th><td>${esc(b.person_meeting)} (${esc(b.phone || '-')})</td></tr>
+          <tr><th>หมายเหตุ</th><td>${esc(b.remark || '-')}</td></tr>
+          <tr><th>รูปภาพแนบ</th><td id="att-preview-cell">กำลังโหลดรูปภาพ...</td></tr>
+        </table>`);
+      if (b.file_id) {
+        const ids = String(b.file_id).split(',').map((s) => s.trim()).filter(Boolean);
+        const names = String(b.file_name || '').split('|');
+        const attCell = document.getElementById('att-preview-cell');
+        attCell.innerHTML = '';
+        for (let i = 0; i < ids.length; i++) {
+          const fid = ids[i];
+          const fname = names[i] || `ไฟล์แนบ ${i + 1}`;
+          const wrap = document.createElement('div');
+          wrap.style.marginBottom = '12px';
+          wrap.textContent = `กำลังโหลด ${fname}...`;
+          attCell.appendChild(wrap);
+          try {
+            const dataUrl = state.imageCache[fid] || (await gas('apiGetAttachmentDataUrl', state.token, fid));
+            state.imageCache[fid] = dataUrl;
+            const isImg = dataUrl.startsWith('data:image/') && !dataUrl.startsWith('data:image/heic') && !dataUrl.startsWith('data:image/heif');
+            if (isImg) {
+              wrap.innerHTML = `
+                <div style="margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <span>${esc(fname)}</span>
+                  <button type="button" class="btn btn-primary btn-sm">เปิดดูรูปใหญ่</button>
+                </div>
+                <img src="${dataUrl}" alt="${esc(fname)}" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border);cursor:zoom-in" />`;
+              const openZoom = () => openImageLightbox(dataUrl, fname);
+              wrap.querySelector('button').onclick = openZoom;
+              wrap.querySelector('img').onclick = openZoom;
+            } else {
+              const parts = String(dataUrl).split(',');
+              const mimeMatch = parts[0].match(/:(.*?);/);
+              const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+              const bin = atob(parts[1] || '');
+              const bytes = new Uint8Array(bin.length);
+              for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+              const blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+              wrap.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary btn-sm" href="${blobUrl}" target="_blank">เปิดดู ${esc(fname)}</a><a class="btn btn-secondary btn-sm" href="${blobUrl}" download="${esc(fname)}">ดาวน์โหลด</a></div>`;
+            }
+          } catch (e) {
+            wrap.textContent = `ไม่สามารถโหลด ${fname} ได้`;
+          }
+        }
+      } else { document.getElementById('att-preview-cell').textContent = '-'; }
+    };
+
+    window.editBooking = (id) => {
+      const b = state.bookingsCache.find((x) => Number(x.id) === Number(id));
+      if (!b) return;
+      const baseSlots = state.timeSlots && state.timeSlots.length ? state.timeSlots : ['08.30–09.30','09.31–10.30','10.31–11.30','13.01–14.00','14.01–15.00'];
+      const slotList = baseSlots.includes(b.time_slot) ? baseSlots : [b.time_slot].concat(baseSlots);
+      const locOpts = state.locations.map((l) => '<option value="' + l.id + '" ' + (Number(l.id) === Number(b.location_id) ? 'selected' : '') + '>' + esc(l.name) + '</option>').join('');
+      const slotOpts = slotList.map((s) => '<option value="' + esc(s) + '" ' + (s === b.time_slot ? 'selected' : '') + '>' + esc(s) + '</option>').join('');
+      openModal('แก้ไขรายการจอง #' + b.id, [
+        '<form id="edit-bk-form" novalidate>',
+        '  <div class="form-grid">',
+        '    <div class="form-group"><label>สถานที่คืน <span class="req">*</span></label><select name="location_id">' + locOpts + '</select></div>',
+        '    <div class="form-group"><label>วันที่ <span class="req">*</span></label><input type="date" name="booking_date" min="' + esc(todayStrLocal()) + '" value="' + esc(b.booking_date) + '" required /></div>',
+        '    <div class="form-group"><label>ช่วงเวลา <span class="req">*</span></label><select name="time_slot">' + slotOpts + '</select></div>',
+        '    <div class="form-group"><label>หัวข้อ <span class="req">*</span></label><input name="subject" value="' + esc(b.subject) + '" required /></div>',
+        '    <div class="form-group"><label>โครงการ</label><input name="header" value="' + esc(b.header || '') + '" /></div>',
+        '    <div class="form-group"><label>เลขที่สัญญา</label><input name="contract_no" value="' + esc(b.contract_no || '') + '" /></div>',
+        '    <div class="form-group"><label>หน่วยงาน <span class="req">*</span></label><input name="department" value="' + esc(b.department) + '" required /></div>',
+        '    <div class="form-group"><label>ผู้ติดต่อ <span class="req">*</span></label><input name="person_meeting" value="' + esc(b.person_meeting) + '" required /></div>',
+        '    <div class="form-group"><label>เบอร์โทร <span class="req">*</span></label><input name="phone" value="' + esc(b.phone || '') + '" required /></div>',
+        '  </div>',
+        '  <div class="form-group"><label>หมายเหตุ</label><textarea name="remark" rows="2">' + esc(b.remark || '') + '</textarea></div>',
+        '  <div id="edit-bk-err" class="alert alert-error hidden"></div>',
+        '  <button type="submit" class="btn btn-primary" id="edit-bk-submit">บันทึกการแก้ไข</button>',
+        '</form>'
+      ].join('\n'));
+      document.getElementById('edit-bk-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('edit-bk-err'); errEl.classList.add('hidden');
+        const btn = document.getElementById('edit-bk-submit');
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+        try {
+          await gas('apiUpdateBooking', state.token, id, data);
+          closeModal(); showToast('บันทึกการแก้ไขเรียบร้อย');
+          if (state.currentPage === 'calendar') renderCalendarPage(); else renderManageBookingsPage();
+        } catch (err) {
+          errEl.textContent = (err && err.message) || 'บันทึกไม่สำเร็จ'; errEl.classList.remove('hidden');
+        } finally { btn.disabled = false; btn.textContent = 'บันทึกการแก้ไข'; }
+      };
+    };
+
+    window.deleteBooking = (id) => {
+      openConfirmModal('ยืนยันการลบรายการจอง', 'ยืนยันการลบรายการจอง #' + id + ' ใช่หรือไม่?', async () => {
+        await gas('apiDeleteBooking', state.token, id);
+        closeModal(); showToast('ลบรายการจองเรียบร้อย');
+        if (state.currentPage === 'calendar') renderCalendarPage(); else renderManageBookingsPage();
+      });
+    };
+
+  </script>
+  <script>
+    window._stage = 'app_3';
+    async function renderReportsPage() {
+      const locOpts = state.locations.map((l) => '<option value="' + l.id + '">' + esc(l.name) + '</option>').join('');
+      document.getElementById('page-content').innerHTML = [
+        '<div class="panel">',
+        '  <div class="form-grid">',
+        '    <div class="form-group"><label>สถานที่คืน</label><select id="rep-loc"><option value="">ทั้งหมด</option>' + locOpts + '</select></div>',
+        '    <div class="form-group"><label>วันที่เริ่มต้น</label><input type="date" id="rep-from" /></div>',
+        '    <div class="form-group"><label>วันที่สิ้นสุด</label><input type="date" id="rep-to" /></div>',
+        '    <div class="form-group"><label>หน่วยงาน</label><input id="rep-dept" placeholder="ระบุชื่อหน่วยงาน..." /></div>',
+        '  </div>',
+        '  <div class="btn-row">',
+        '    <button class="btn btn-primary" id="rep-run">สร้างรายงาน</button>',
+        '    <button class="btn btn-secondary" id="rep-csv">ส่งออก CSV</button>',
+        '  </div>',
+        '</div>',
+        '<div class="panel" id="rep-result">กำลังโหลด...</div>'
+      ].join('\n');
+      let lastRows = [];
+      async function run() {
+        const res = await gas('apiGetReports', state.token, { location_id: document.getElementById('rep-loc').value, date_from: document.getElementById('rep-from').value, date_to: document.getElementById('rep-to').value, department: document.getElementById('rep-dept').value });
+        lastRows = (res && Array.isArray(res.summary)) ? res.summary : [];
+        const tbody = lastRows.map((r) => '<tr><td>' + esc(r.department) + '</td><td>' + esc(r.location_name) + '</td><td class="num"><strong>' + r.total_count + '</strong></td><td class="num">' + r.active_count + '</td></tr>').join('') || '<tr><td colspan="4">ไม่มีข้อมูล</td></tr>';
+        const mCards = lastRows.map((r) => '<div class="m-card"><div class="m-card-title">' + esc(r.department) + '</div><div class="m-card-meta">สถานที่: ' + esc(r.location_name) + '<br>รวมทั้งหมด: <strong>' + r.total_count + '</strong> &middot; จองสำเร็จ: <strong>' + r.active_count + '</strong></div></div>').join('') || '<p>ไม่มีข้อมูล</p>';
+        document.getElementById('rep-result').innerHTML =
+          '<div class="desktop-only-table table-wrap"><table><thead><tr><th>หน่วยงาน</th><th>สถานที่คืน</th><th>รวมทั้งหมด</th><th>จองสำเร็จ</th></tr></thead><tbody>' + tbody + '</tbody></table></div>' +
+          '<div class="mobile-cards">' + mCards + '</div>';
+      }
+      document.getElementById('rep-run').onclick = run;
+      document.getElementById('rep-csv').onclick = () => {
+        const header = 'หน่วยงาน,สถานที่คืน,รวมทั้งหมด,จองสำเร็จ\n';
+        const csv = '\uFEFF' + header + lastRows.map((r) => '"' + String(r.department || '').replace(/"/g, '""') + '","' + String(r.location_name || '').replace(/"/g, '""') + '",' + r.total_count + ',' + r.active_count).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'mwa-booking-report.csv';
+        a.click();
+      };
+      await run();
+    }
+
+    async function renderUsersPage() {
+      const users = await gas('apiGetUsers', state.token);
+      state.usersCache = Array.isArray(users) ? users : [];
+      const tbody = state.usersCache.map((u) => {
+        const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป';
+        const statusHtml = Number(u.is_active) ? '<span class="badge badge-active"><span class="badge-dot"></span>ใช้งาน</span>' : '<span class="badge badge-inactive">ปิด</span>';
+        return '<tr><td>' + roleLabel + '</td><td><code>' + esc(u.username) + '</code></td><td><code>' + esc(u.password_plain || '-') + '</code></td><td>' + esc(u.full_name) + '</td><td>' + esc(u.department) + '<br><small>' + esc(u.phone) + '</small></td><td>' + statusHtml + '</td><td><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editUser(' + u.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteUser(' + u.id + ')">ลบ</button></div></td></tr>';
+      }).join('');
+      const mCards = state.usersCache.map((u) => {
+        const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป';
+        const statusHtml = Number(u.is_active) ? '<span class="badge badge-active"><span class="badge-dot"></span>ใช้งาน</span>' : '<span class="badge badge-inactive">ปิด</span>';
+        return '<div class="m-card"><div class="m-card-top"><span class="m-card-time">' + esc(u.username) + '</span>' + statusHtml + '</div><div class="m-card-title">' + esc(u.full_name) + '</div><div class="m-card-meta">บทบาท: ' + roleLabel + '<br>Password: <code>' + esc(u.password_plain || '-') + '</code><br>สังกัด: ' + esc(u.department) + ' &middot; โทร: ' + esc(u.phone) + '</div><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editUser(' + u.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteUser(' + u.id + ')">ลบ</button></div></div>';
+      }).join('') || '<p>ไม่พบข้อมูล</p>';
+      document.getElementById('page-content').innerHTML =
+        '<div class="panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><strong>รายชื่อผู้ใช้งาน (' + state.usersCache.length + ')</strong><button class="btn btn-primary btn-sm" id="add-user-btn">+ เพิ่มผู้ใช้งาน</button></div>' +
+        '<div class="desktop-only-table table-wrap"><table><thead><tr><th>บทบาท</th><th>Username</th><th>Password</th><th>ชื่อ-นามสกุล</th><th>สังกัด / โทร</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' + tbody + '</tbody></table></div>' +
+        '<div class="mobile-cards">' + mCards + '</div>' +
+        '</div>';
+      document.getElementById('add-user-btn').onclick = () => openUserModal({});
+    }
+    window.editUser = (id) => openUserModal((state.usersCache || []).find((u) => Number(u.id) === Number(id)) || {});
+    function openUserModal(u) {
+      const isEdit = Boolean(u.id);
+      const secondField = isEdit
+        ? '<div class="form-group"><label>สถานะ</label><select name="is_active"><option value="1" ' + (Number(u.is_active) ? 'selected' : '') + '>ใช้งาน</option><option value="0" ' + (!Number(u.is_active) ? 'selected' : '') + '>ปิดใช้งาน</option></select></div>'
+        : '<div class="form-group"><label>Username <span class="req">*</span></label><input name="username" required /></div>';
+      const pwLabel = isEdit ? 'Password (เว้นว่างหากไม่เปลี่ยน)' : 'Password <span class="req">*</span>';
+      const pwVal = esc(isEdit ? (u.password_plain || '') : '');
+      openModal(isEdit ? 'แก้ไขผู้ใช้งาน: ' + u.username : 'เพิ่มผู้ใช้งานใหม่', [
+        '<form id="u-form" novalidate>',
+        '  <div class="form-grid">',
+        '    <div class="form-group"><label>บทบาท</label><select name="role"><option value="user" ' + (u.role !== 'admin' ? 'selected' : '') + '>ผู้ใช้งานทั่วไป</option><option value="admin" ' + (u.role === 'admin' ? 'selected' : '') + '>ผู้ดูแลระบบ</option></select></div>',
+        '    ' + secondField,
+        '    <div class="form-group"><label>' + pwLabel + '</label><input type="text" name="password" value="' + pwVal + '" /></div>',
+        '    <div class="form-group"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input name="full_name" value="' + esc(u.full_name || '') + '" required /></div>',
+        '    <div class="form-group"><label>ตำแหน่ง</label><input name="position" value="' + esc(u.position || '') + '" /></div>',
+        '    <div class="form-group"><label>สังกัด / หน่วยงาน <span class="req">*</span></label><input name="department" value="' + esc(u.department || '') + '" required /></div>',
+        '    <div class="form-group"><label>อีเมล</label><input type="text" name="email" value="' + esc(u.email || '') + '" /></div>',
+        '    <div class="form-group"><label>เบอร์โทรศัพท์ <span class="req">*</span></label><input name="phone" value="' + esc(u.phone || '') + '" required /></div>',
+        '  </div>',
+        '  <div id="u-err" class="alert alert-error hidden"></div>',
+        '  <button type="submit" class="btn btn-primary" id="u-submit">' + (isEdit ? 'บันทึกการแก้ไข' : 'บันทึก') + '</button>',
+        '</form>'
+      ].join('\n'));
+      document.getElementById('u-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('u-err'); errEl.classList.add('hidden');
+        const btn = document.getElementById('u-submit');
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        if (isEdit) { data.id = u.id; data.is_active = data.is_active === '1'; if (!data.password) delete data.password; }
+        btn.disabled = true;
+        try {
+          await gas('apiSaveUser', state.token, data);
+          closeModal(); showToast('บันทึกข้อมูลผู้ใช้เรียบร้อย'); renderUsersPage();
+        } catch (err) {
+          errEl.textContent = (err && err.message) || 'บันทึกไม่สำเร็จ'; errEl.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      };
+    }
+    window.deleteUser = (id) => {
+      openConfirmModal('ยืนยันการลบผู้ใช้งาน', 'ยืนยันการลบผู้ใช้งานรายนี้ใช่หรือไม่?', async () => {
+        await gas('apiDeleteUser', state.token, id);
+        closeModal(); showToast('ลบผู้ใช้งานเรียบร้อย'); renderUsersPage();
+      });
+    };
+
+    async function renderLocationsPage() {
+      const init = await gas('apiGetInitialData', state.token);
+      state.locations = (init && Array.isArray(init.locations)) ? init.locations : [];
+      const tbody = state.locations.map((l) => '<tr><td><strong>' + esc(l.name) + '</strong></td><td>' + esc(l.address) + '</td><td>' + esc(l.caretaker) + '</td><td>' + esc(l.phone) + '</td><td><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editLocation(' + l.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteLocation(' + l.id + ')">ลบ</button></div></td></tr>').join('');
+      const mCards = state.locations.map((l) => '<div class="m-card"><div class="m-card-title">' + esc(l.name) + '</div><div class="m-card-meta">ที่ตั้ง: ' + esc(l.address || '-') + '<br>ผู้ดูแล: ' + esc(l.caretaker || '-') + ' &middot; โทร: ' + esc(l.phone || '-') + '</div><div class="action-group"><button class="btn btn-secondary btn-sm" onclick="editLocation(' + l.id + ')">แก้ไข</button><button class="btn btn-danger btn-sm" onclick="deleteLocation(' + l.id + ')">ลบ</button></div></div>').join('') || '<p>ไม่พบข้อมูล</p>';
+      document.getElementById('page-content').innerHTML =
+        '<div class="panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><strong>สถานที่คืนวัสดุ (' + state.locations.length + ')</strong><button class="btn btn-primary btn-sm" id="add-loc-btn">+ เพิ่มสถานที่คืน</button></div>' +
+        '<div class="desktop-only-table table-wrap"><table><thead><tr><th>ชื่อสถานที่</th><th>สถานที่ตั้ง</th><th>ผู้ดูแล</th><th>โทร</th><th>จัดการ</th></tr></thead><tbody>' + tbody + '</tbody></table></div>' +
+        '<div class="mobile-cards">' + mCards + '</div>' +
+        '</div>';
+      document.getElementById('add-loc-btn').onclick = () => openLocModal({});
+    }
+    window.editLocation = (id) => openLocModal(state.locations.find((l) => Number(l.id) === Number(id)) || {});
+    function openLocModal(l) {
+      openModal(l.id ? 'แก้ไขสถานที่คืน' : 'เพิ่มสถานที่คืน', [
+        '<form id="l-form" novalidate>',
+        '  <div class="form-grid">',
+        '    <div class="form-group"><label>ชื่อสถานที่คืน <span class="req">*</span></label><input name="name" value="' + esc(l.name || '') + '" required /></div>',
+        '    <div class="form-group"><label>สถานที่ตั้ง</label><input name="address" value="' + esc(l.address || '') + '" /></div>',
+        '    <div class="form-group"><label>ความจุ</label><input name="capacity" value="' + esc(l.capacity || '') + '" /></div>',
+        '    <div class="form-group"><label>ผู้ดูแล</label><input name="caretaker" value="' + esc(l.caretaker || '') + '" /></div>',
+        '    <div class="form-group"><label>หน่วยงาน</label><input name="department" value="' + esc(l.department || '') + '" /></div>',
+        '    <div class="form-group"><label>โทร</label><input name="phone" value="' + esc(l.phone || '') + '" /></div>',
+        '  </div>',
+        '  <div class="form-group"><label>หมายเหตุ</label><textarea name="remark" rows="2">' + esc(l.remark || '') + '</textarea></div>',
+        '  <div id="l-err" class="alert alert-error hidden"></div>',
+        '  <button type="submit" class="btn btn-primary" id="l-submit">บันทึก</button>',
+        '</form>'
+      ].join('\n'));
+      document.getElementById('l-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('l-err'); errEl.classList.add('hidden');
+        const btn = document.getElementById('l-submit');
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        if (l.id) data.id = l.id;
+        btn.disabled = true;
+        try {
+          await gas('apiSaveLocation', state.token, data);
+          closeModal(); showToast('บันทึกสถานที่เรียบร้อย'); renderLocationsPage();
+        } catch (err) {
+          errEl.textContent = (err && err.message) || 'บันทึกไม่สำเร็จ'; errEl.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+      };
+    }
+    window.deleteLocation = (id) => {
+      openConfirmModal('ยืนยันการลบสถานที่คืน', 'ยืนยันการลบสถานที่คืนนี้ใช่หรือไม่?', async () => {
+        await gas('apiDeleteLocation', state.token, id);
+        closeModal(); showToast('ลบสถานที่เรียบร้อย'); renderLocationsPage();
+      });
+    };
+
+    async function renderAuditLogsPage() {
+      const logs = await gas('apiGetAuditLogs', state.token);
+      const list = Array.isArray(logs) ? logs : [];
+      const tbody = list.map((l) => '<tr><td class="num"><small>' + esc(l.created_at) + '</small></td><td><code>' + esc(l.username) + '</code></td><td>' + esc(l.action) + '</td><td>' + esc(l.entity_type) + ' #' + esc(l.entity_id) + '</td><td>' + esc(l.details) + '</td></tr>').join('');
+      const mCards = list.map((l) => '<div class="m-card"><div class="m-card-top"><span class="m-card-time">' + esc(l.action) + '</span><small class="num">' + esc(l.created_at) + '</small></div><div class="m-card-meta">ผู้ใช้: <code>' + esc(l.username) + '</code> &middot; ' + esc(l.entity_type) + ' #' + esc(l.entity_id) + '<br>' + esc(l.details) + '</div></div>').join('') || '<p>ไม่พบข้อมูล</p>';
+      document.getElementById('page-content').innerHTML =
+        '<div class="panel">' +
+        '<div class="desktop-only-table table-wrap"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>เป้าหมาย</th><th>รายละเอียด</th></tr></thead><tbody>' + tbody + '</tbody></table></div>' +
+        '<div class="mobile-cards">' + mCards + '</div>' +
+        '</div>';
+    }
+
+    document.getElementById('logout-btn').onclick = async () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.add('hidden');
+      const tok = state.token;
+      clearSessionToken_();
+      state.user = null; state.token = '';
+      document.getElementById('app-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+      try { if (tok) await gas('apiLogout', tok); } catch (e) {}
+    };
+    document.querySelectorAll('.nav-item').forEach((b) => { b.onclick = () => { document.getElementById('sidebar-backdrop').classList.add('hidden'); navigate(b.dataset.page); }; });
+    document.getElementById('quick-book-btn').onclick = () => navigate('create-booking');
+    document.getElementById('menu-toggle').onclick = () => {
+      const open = document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-backdrop').classList.toggle('hidden', !open);
+    };
+    document.getElementById('sidebar-backdrop').onclick = () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.add('hidden');
+    };
+    document.getElementById('modal-close').onclick = closeModal;
+    document.getElementById('modal-backdrop').onclick = (e) => { if (e.target.id === 'modal-backdrop') closeModal(); };
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-backdrop').classList.add('hidden');
+        closeLightbox();
+        closeModal();
+      }
+    });
+
+    (async function restoreSession_() {
+      const saved = loadSessionToken_();
+      if (!saved) return;
+      const btn = document.getElementById('login-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'กำลังกู้คืนเซสชัน...'; }
+      try {
+        const res = await gas('apiGetInitialData', saved);
+        if (res && res.user) {
+          state.user = res.user;
+          state.token = saved;
+          state.timeSlots = res.timeSlots || [];
+          state.locations = res.locations || [];
+          state.initialCalendar = res.initialCalendar || null;
+          showApp();
+          return;
+        }
+        clearSessionToken_();
+      } catch (e) {
+        clearSessionToken_();
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
+      }
+    })();
+</script>
+
+</body>
+</html>
