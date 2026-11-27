@@ -28,7 +28,10 @@
       --radius-lg: 12px;
     }
     * { box-sizing: border-box; }
-    html, body { max-width: 100%; overflow-x: hidden; }
+    html, body { max-width: 100%; }
+    body { overflow-x: hidden; }
+    @supports (overflow: clip) { body { overflow-x: clip; } }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body { margin: 0; font-family: "IBM Plex Sans Thai", "IBM Plex Sans", sans-serif; background: var(--bg-canvas); color: var(--ink); line-height: 1.5; }
     .hidden { display: none !important; }
     .req { color: var(--danger); font-weight: 700; }
@@ -36,7 +39,12 @@
     :focus-visible { outline: 2px solid var(--mwa-blue); outline-offset: 2px; }
 
     /* Auth Centered Card (iframe-safe) */
-    .auth-layout { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg-canvas); }
+    .auth-layout { min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg-canvas); }
+    @media (max-width: 640px) {
+      .auth-layout { align-items: flex-start; padding: 28px 14px 24px; }
+      .auth-layout .auth-box { padding: 22px 18px; }
+      input, select, textarea { font-size: 16px !important; }
+    }
     .auth-box { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; box-shadow: 0 4px 18px rgba(17,28,45,0.06); }
     .auth-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 6px; background: var(--mwa-blue-soft); color: var(--mwa-blue); font-size: 0.78rem; font-weight: 700; margin-bottom: 14px; }
     .auth-header { margin-bottom: 20px; }
@@ -45,7 +53,7 @@
     .auth-specs { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px; }
 
     /* Shell */
-    .app-shell { display: flex; min-height: 100vh; }
+    .app-shell { display: flex; min-height: 100vh; min-height: 100dvh; }
     .sidebar { width: 248px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; }
     .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 18px 18px 16px; border-bottom: 1px solid var(--border); }
     .brand-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--mwa-blue); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -471,7 +479,7 @@
     document.getElementById('login-password').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } };
 
   </script>
-<script>
+  <script>
     window._stage = 'app_0';
     function navigate(page) {
       if (['reports', 'manage-users', 'manage-locations', 'audit-logs'].includes(page) && state.user.role !== 'admin') {
